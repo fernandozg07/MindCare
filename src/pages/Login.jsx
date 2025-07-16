@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
-import { Navigate, Link } from 'react-router-dom' // Importe Link
-import { useAuth } from '../contexts/AuthContext'
-import { Brain, Mail, Lock } from 'lucide-react'
-import LoadingSpinner from '../components/LoadingSpinner'
-import { Formik, Form, Field, ErrorMessage } from 'formik'
-import * as Yup from 'yup'
+import React, { useState } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom'; // Importe useNavigate e Link
+import { useAuth } from '../contexts/AuthContext';
+import { Brain, Mail, Lock } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
 
 const validationSchema = Yup.object({
   email: Yup.string()
@@ -12,31 +12,48 @@ const validationSchema = Yup.object({
     .required('Email é obrigatório'),
   password: Yup.string()
     .required('Senha é obrigatória')
-})
+});
 
 const Login = () => {
-  const { login, isAuthenticated, loading } = useAuth()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { login, isAuthenticated, loading, user } = useAuth(); // Adicione 'user' aqui
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate(); // Inicialize o hook useNavigate
 
-  if (!loading && isAuthenticated()) {
-    return <Navigate to="/" replace />
-  }
+  // Efeito para redirecionar se o usuário já estiver logado (útil se ele tentar acessar /login de novo)
+  // ou após um login bem-sucedido.
+  // Este useEffect também será acionado após o login bem-sucedido, pois 'user' será atualizado.
+  React.useEffect(() => {
+    if (!loading && isAuthenticated()) {
+      // Redireciona com base no tipo de usuário, se aplicável
+      if (user?.tipo === 'terapeuta') {
+        navigate('/dashboard/terapeuta', { replace: true });
+      } else if (user?.tipo === 'paciente') {
+        navigate('/dashboard/paciente', { replace: true });
+      } else {
+        // Redirecionamento padrão se o tipo não for reconhecido ou se não houver tipo
+        navigate('/', { replace: true }); // Redireciona para a página inicial
+      }
+    }
+  }, [loading, isAuthenticated, user, navigate]); // Dependências: loading, isAuthenticated, user e navigate
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   const handleSubmit = async (values, { setFieldError }) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     
-    const result = await login(values)
+    const result = await login(values); // Chama a função login do AuthContext
     
     if (!result.success) {
-      setFieldError('email', result.error)
+      setFieldError('email', result.error);
     }
     
-    setIsSubmitting(false)
-  }
+    setIsSubmitting(false);
+    // A navegação principal será tratada pelo useEffect acima,
+    // que reage à atualização do 'user' no AuthContext.
+    // Não é necessário adicionar um navigate aqui, pois o useEffect já fará isso.
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
@@ -130,7 +147,7 @@ const Login = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
