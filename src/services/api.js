@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+// Define a URL base da API com base na variável de ambiente do Vite.
+// Em produção (Render), import.meta.env.VITE_REACT_APP_BACKEND_URL será 'https://holistica-ia-backend.onrender.com'.
+// Em desenvolvimento local, o proxy do Vite (vite.config.js) lida com '/api',
+// mas a variável ainda é necessária para o build de produção.
+const BACKEND_BASE_URL = import.meta.env.VITE_REACT_APP_BACKEND_URL;
+
 const api = axios.create({
-    baseURL: '/api/', // URL base para todas as requisições API
+    // A baseURL será a URL completa do backend em produção, ou '/api' em desenvolvimento local
+    // (que será interceptado pelo proxy do Vite).
+    baseURL: `${BACKEND_BASE_URL}/api/`,
     withCredentials: true, // Importante para enviar e receber cookies de sessão (CSRF)
     headers: {
         'Content-Type': 'application/json', // Define o tipo de conteúdo padrão para JSON
@@ -18,7 +26,8 @@ api.interceptors.request.use(
                 let csrfToken = getCsrfToken(); // Tenta obter o token do cookie
                 if (!csrfToken) {
                     // Se o token não estiver no cookie, tenta buscá-lo do servidor
-                    await fetchCsrfToken();
+                    // A requisição para 'csrf/' deve ser relativa à baseURL
+                    await api.get('csrf/'); 
                     csrfToken = getCsrfToken(); // Tenta novamente após a busca
                 }
                 if (csrfToken) {
@@ -80,13 +89,13 @@ function getCsrfToken() {
 async function fetchCsrfToken() {
     try {
         // Faz uma requisição GET para o endpoint CSRF do Django
-        await api.get('csrf/');
+        await api.get('csrf/'); 
     } catch (error) {
         console.warn('Erro ao buscar CSRF token:', error);
     }
 }
 
-/**
+/*
  * Serviços de autenticação
  */
 export const authService = {
@@ -101,7 +110,7 @@ export const authService = {
     }
 };
 
-/**
+/*
  * Serviços de usuário
  */
 export const userService = {
@@ -144,7 +153,7 @@ export const userService = {
     },
 };
 
-/**
+/*
  * Serviços de pacientes (para terapeutas e pacientes)
  */
 export const patientService = {
@@ -193,7 +202,7 @@ export const patientService = {
     },
 };
 
-/**
+/*
  * Serviços de sessões
  */
 export const sessionService = {
@@ -223,7 +232,7 @@ export const sessionService = {
     }
 };
 
-/**
+/*
  * Serviços de mensagens
  */
 export const messageService = {
@@ -255,7 +264,7 @@ export const messageService = {
     }
 };
 
-/**
+/*
  * Serviços de relatórios
  */
 export const reportService = {
@@ -285,7 +294,7 @@ export const reportService = {
     }
 };
 
-/**
+/*
  * Serviços de IA (Ajustado para os novos caminhos das APIs de painel)
  */
 export const aiService = {
@@ -301,7 +310,7 @@ export const aiService = {
     },
 };
 
-/**
+/*
  * Serviços de notificações
  */
 export const notificationService = {
