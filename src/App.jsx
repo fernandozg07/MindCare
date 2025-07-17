@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'; // Importe useMemo
+import React, { useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -30,7 +30,7 @@ function App() {
   const allowedForTherapistDashboard = useMemo(() => ['terapeuta'], []);
   const allowedForTherapistOnly = useMemo(() => ['terapeuta'], []);
   const allowedForPatientOnly = useMemo(() => ['paciente'], []);
-  // CORREÇÃO: Inclua 'admin' aqui se administradores devem acessar a rota principal e o layout.
+  // Inclua 'admin' aqui se administradores devem acessar a rota principal e o layout.
   const allowedForAllAuthenticated = useMemo(() => ['terapeuta', 'paciente', 'admin'], []); 
 
   return (

@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react'; // Importe useEffect
-import { Link, useNavigate } from 'react-router-dom'; // Remova Navigate daqui, pois usaremos useNavigate no useEffect
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Brain, Mail, Lock } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner'; // Certifique-se de que este caminho está correto e o componente funciona
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 
+// Esquema de validação para o formulário de login usando Yup
 const validationSchema = Yup.object({
   email: Yup.string()
     .email('Email inválido')
@@ -14,28 +15,40 @@ const validationSchema = Yup.object({
     .required('Senha é obrigatória')
 });
 
+/**
+ * Componente de página de Login.
+ * Lida com a entrada de credenciais do usuário e o redirecionamento após o login.
+ */
 const Login = () => {
+  // Obtém o estado e funções de autenticação do contexto
   const { login, isAuthenticated, loading, user } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false); // Estado para controlar o envio do formulário
+  const navigate = useNavigate(); // Hook para navegação programática
 
-  // Use useEffect para lidar com o redirecionamento inicial
-  // Isso evita o loop de renderização ao chamar navigate diretamente na renderização
+  /**
+   * Efeito para lidar com o redirecionamento inicial.
+   * Se o usuário já estiver autenticado e o carregamento terminou,
+   * redireciona para o dashboard apropriado ou para a raiz.
+   * Isso evita que o formulário de login apareça brevemente para usuários já logados.
+   */
   useEffect(() => {
     if (!loading && isAuthenticated()) {
+      // Redireciona com base no tipo de usuário
       if (user?.tipo === 'terapeuta') {
         navigate('/dashboard/terapeuta', { replace: true });
       } else if (user?.tipo === 'paciente') {
         navigate('/dashboard/paciente', { replace: true });
+      } else if (user?.tipo === 'admin') { // Adicionado para lidar com o tipo 'admin'
+        navigate('/dashboard/admin', { replace: true }); // Exemplo: redireciona para um dashboard de admin
       } else {
-        navigate('/', { replace: true }); // Redirecionamento padrão
+        navigate('/', { replace: true }); // Redirecionamento padrão para outros tipos ou se 'tipo' for nulo
       }
     }
-  }, [isAuthenticated, loading, user, navigate]); // Adicione todas as dependências relevantes
+  }, [isAuthenticated, loading, user, navigate]); // Dependências do useEffect
 
   // Mostra um spinner de carregamento enquanto o status de autenticação está sendo verificado
   if (loading) {
-    return <LoadingSpinner />; // Verifique se este componente está funcionando
+    return <LoadingSpinner text="Verificando autenticação..." />; // Adicione um texto para clareza
   }
 
   // Se o usuário já estiver autenticado e o carregamento terminou,
@@ -45,21 +58,28 @@ const Login = () => {
     return null; 
   }
 
+  /**
+   * Função para lidar com o envio do formulário de login.
+   * @param {object} values - Valores do formulário (email e password).
+   * @param {object} { setFieldError } - Função do Formik para definir erros de campo.
+   */
   const handleSubmit = async (values, { setFieldError }) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Ativa o estado de envio
     
     const result = await login(values); // Chama a função de login do AuthContext
     
     if (result.success) {
       // Redirecionamento após o sucesso do login.
       // O 'user' no contexto deve ter sido atualizado pela função 'login'.
-      // Podemos usar o 'user' do contexto ou o 'result.user_type' se o backend retornar.
-      const userType = result.user_type || user?.tipo; // Prioriza o tipo da resposta, senão usa o do contexto
+      // Prioriza o tipo de usuário retornado pela API, senão usa o do estado 'user' (já atualizado).
+      const userType = result.user_type || user?.tipo; 
 
       if (userType === 'terapeuta') {
         navigate('/dashboard/terapeuta', { replace: true });
       } else if (userType === 'paciente') {
         navigate('/dashboard/paciente', { replace: true });
+      } else if (userType === 'admin') { // Adicionado para lidar com o tipo 'admin'
+        navigate('/dashboard/admin', { replace: true }); // Exemplo: redireciona para um dashboard de admin
       } else {
         navigate('/', { replace: true }); // Redirecionamento padrão
       }
@@ -68,13 +88,13 @@ const Login = () => {
       setFieldError('email', result.error); 
     }
     
-    setIsSubmitting(false);
+    setIsSubmitting(false); // Desativa o estado de envio
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Header */}
+        {/* Header da página de login */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
             <Brain className="h-8 w-8 text-white" />
@@ -87,7 +107,7 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Formulário */}
+        {/* Formulário de login */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <Formik
             initialValues={{
