@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Navigate, Link, useNavigate } from 'react-router-dom'; // Importe useNavigate
-import { useAuth } from '../contexts/AuthContext'; // Certifique-se de que o caminho está correto
+import React, { useState, useEffect } from 'react'; // Importe useEffect
+import { Link, useNavigate } from 'react-router-dom'; // Remova Navigate daqui, pois usaremos useNavigate no useEffect
+import { useAuth } from '../contexts/AuthContext';
 import { Brain, Mail, Lock } from 'lucide-react';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '../components/LoadingSpinner'; // Certifique-se de que este caminho está correto e o componente funciona
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 
@@ -15,40 +15,46 @@ const validationSchema = Yup.object({
 });
 
 const Login = () => {
-  const { login, isAuthenticated, loading, user } = useAuth(); // Obtenha a função login, isAuthenticated, loading e o objeto user
+  const { login, isAuthenticated, loading, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate(); // Inicialize o hook useNavigate
+  const navigate = useNavigate();
 
-  // Se o usuário já estiver autenticado e não estiver mais carregando,
-  // redireciona-o imediatamente para a rota apropriada.
-  // Isso lida com o caso de um usuário logado tentar acessar /login diretamente.
-  if (!loading && isAuthenticated()) {
-    if (user?.tipo === 'terapeuta') {
-      return <Navigate to="/dashboard/terapeuta" replace />;
-    } else if (user?.tipo === 'paciente') {
-      return <Navigate to="/dashboard/paciente" replace />;
-    } else {
-      return <Navigate to="/" replace />; // Redirecionamento padrão
+  // Use useEffect para lidar com o redirecionamento inicial
+  // Isso evita o loop de renderização ao chamar navigate diretamente na renderização
+  useEffect(() => {
+    if (!loading && isAuthenticated()) {
+      if (user?.tipo === 'terapeuta') {
+        navigate('/dashboard/terapeuta', { replace: true });
+      } else if (user?.tipo === 'paciente') {
+        navigate('/dashboard/paciente', { replace: true });
+      } else {
+        navigate('/', { replace: true }); // Redirecionamento padrão
+      }
     }
+  }, [isAuthenticated, loading, user, navigate]); // Adicione todas as dependências relevantes
+
+  // Mostra um spinner de carregamento enquanto o status de autenticação está sendo verificado
+  if (loading) {
+    return <LoadingSpinner />; // Verifique se este componente está funcionando
   }
 
-  if (loading) {
-    return <LoadingSpinner />;
+  // Se o usuário já estiver autenticado e o carregamento terminou,
+  // e o useEffect já iniciou o redirecionamento, não renderize o formulário de login.
+  // Isso evita que o formulário apareça brevemente antes do redirecionamento.
+  if (isAuthenticated()) {
+    return null; 
   }
 
   const handleSubmit = async (values, { setFieldError }) => {
     setIsSubmitting(true);
     
-    const result = await login(values); // Chama a função login do AuthContext
+    const result = await login(values); // Chama a função de login do AuthContext
     
     if (result.success) {
-      // *** LÓGICA DE REDIRECIONAMENTO AGORA AQUI, APÓS O SUCESSO DO LOGIN ***
-      // O 'user' no contexto já deve ter sido atualizado pela função 'login'
-      // antes de chegarmos a este ponto, então podemos usar 'user' ou 'result.user'
-      // para decidir o redirecionamento.
-      
-      // Para garantir que o 'user' esteja atualizado, podemos pegar o tipo da resposta do login
-      const userType = result.user_type || result.user?.tipo; // Use result.user_type se o backend retornar assim
+      // Redirecionamento após o sucesso do login.
+      // O 'user' no contexto deve ter sido atualizado pela função 'login'.
+      // Podemos usar o 'user' do contexto ou o 'result.user_type' se o backend retornar.
+      const userType = result.user_type || user?.tipo; // Prioriza o tipo da resposta, senão usa o do contexto
 
       if (userType === 'terapeuta') {
         navigate('/dashboard/terapeuta', { replace: true });
@@ -57,9 +63,9 @@ const Login = () => {
       } else {
         navigate('/', { replace: true }); // Redirecionamento padrão
       }
-
     } else {
-      setFieldError('email', result.error); // Exibe o erro retornado pelo AuthContext
+      // Exibe o erro retornado pelo AuthContext no campo de email
+      setFieldError('email', result.error); 
     }
     
     setIsSubmitting(false);

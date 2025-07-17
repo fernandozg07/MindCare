@@ -1,11 +1,11 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useMemo } from 'react'; // Importe useMemo
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Register from './pages/Register'; // Importe o componente Register
+import Register from './pages/Register';
 import Chat from './pages/Chat';
 import History from './pages/History';
 import PatientDashboard from './pages/PatientDashboard';
@@ -25,6 +25,14 @@ import MeuTerapeuta from './pages/MeuTerapeuta';
 import NotificationsPage from './pages/NotificationsPage';
 
 function App() {
+  // Memoize os arrays 'allowed' para evitar recriação a cada renderização
+  const allowedForPatientDashboard = useMemo(() => ['paciente'], []);
+  const allowedForTherapistDashboard = useMemo(() => ['terapeuta'], []);
+  const allowedForTherapistOnly = useMemo(() => ['terapeuta'], []);
+  const allowedForPatientOnly = useMemo(() => ['paciente'], []);
+  // CORREÇÃO: Inclua 'admin' aqui se administradores devem acessar a rota principal e o layout.
+  const allowedForAllAuthenticated = useMemo(() => ['terapeuta', 'paciente', 'admin'], []); 
+
   return (
     <AuthProvider>
       <Router>
@@ -32,96 +40,100 @@ function App() {
           <Routes>
             {/* Rotas públicas */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} /> {/* Nova rota para registro */}
+            <Route path="/register" element={<Register />} />
             
-            {/* Rotas protegidas */}
+            {/* Rota raiz que redireciona para o chat ou dashboard após login */}
+            {/* Esta rota é protegida para garantir que apenas usuários autenticados a acessem */}
             <Route path="/" element={
-              <PrivateRoute>
-                <Layout />
+              <PrivateRoute allowed={allowedForAllAuthenticated}> {/* Permite ambos os tipos de usuário e admin */}
+                <Layout /> {/* Layout principal da aplicação */}
               </PrivateRoute>
             }>
-              <Route index element={<Chat />} />
+              {/* Rotas aninhadas dentro do Layout */}
+              <Route index element={<Chat />} /> {/* Rota padrão após login */}
               <Route path="chat" element={<Chat />} />
               <Route path="historico" element={<History />} />
               
               {/* Dashboard baseado no tipo de usuário */}
               <Route path="dashboard/paciente" element={
-                <PrivateRoute allowed={['paciente']}>
+                <PrivateRoute allowed={allowedForPatientDashboard}>
                   <PatientDashboard />
                 </PrivateRoute>
               } />
               <Route path="dashboard/terapeuta" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistDashboard}>
                   <TherapistDashboard />
                 </PrivateRoute>
               } />
               
               {/* Rotas específicas para terapeutas */}
               <Route path="pacientes" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <PatientList />
                 </PrivateRoute>
               } />
               <Route path="pacientes/novo" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <PatientForm />
                 </PrivateRoute>
               } />
               <Route path="pacientes/:id" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <PatientDetails />
                 </PrivateRoute>
               } />
               <Route path="pacientes/:id/editar" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <PatientForm />
                 </PrivateRoute>
               } />
               
-              {/* Sessões */}
+              {/* Sessões (assumindo que são acessíveis por ambos ou você terá PrivateRoutes mais específicas) */}
+              {/* Se sessões são para ambos, use allowedForAllAuthenticated */}
               <Route path="sessoes" element={<Sessions />} />
               <Route path="sessoes/nova" element={<SessionForm />} />
               <Route path="sessoes/:id/editar" element={<SessionForm />} />
               
-              {/* Mensagens */}
+              {/* Mensagens (assumindo que são acessíveis por ambos) */}
+              {/* Se mensagens são para ambos, use allowedForAllAuthenticated */}
               <Route path="mensagens" element={<Messages />} />
               <Route path="mensagens/nova" element={<MessageForm />} />
               
               {/* Relatórios (apenas terapeutas) */}
               <Route path="relatorios" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <Reports />
                 </PrivateRoute>
               } />
               <Route path="relatorios/novo" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <ReportForm />
                 </PrivateRoute>
               } />
               <Route path="relatorios/:id/editar" element={
-                <PrivateRoute allowed={['terapeuta']}>
+                <PrivateRoute allowed={allowedForTherapistOnly}>
                   <ReportForm />
                 </PrivateRoute>
               } />
               
-              {/* Perfil */}
+              {/* Perfil (acessível por ambos) */}
               <Route path="perfil" element={<Profile />} />
               
               {/* Rota para "Meu Terapeuta" (acessível apenas por pacientes) */}
               <Route path="meu-terapeuta" element={
-                <PrivateRoute allowed={['paciente']}>
+                <PrivateRoute allowed={allowedForPatientOnly}>
                   <MeuTerapeuta />
                 </PrivateRoute>
               } />
 
-              {/* Rota para Notificações */}
+              {/* Rota para Notificações (acessível por ambos) */}
               <Route path="configuracoes/notificacoes" element={
-                <PrivateRoute allowed={['terapeuta', 'paciente']}>
+                <PrivateRoute allowed={allowedForAllAuthenticated}>
                   <NotificationsPage />
                 </PrivateRoute>
               } />
 
-            </Route>
+            </Route> {/* Fim das rotas protegidas pelo Layout */}
           </Routes>
           
           <ToastContainer
