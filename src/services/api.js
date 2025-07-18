@@ -17,31 +17,35 @@ const api = axios.create({
     timeout: 10000, // Tempo limite de 10 segundos para as requisições
 });
 
+// Cache the CSRF token in memory once fetched
+let cachedCsrfToken = null;
+
 // Interceptor para adicionar CSRF token a requisições que modificam dados (POST, PUT, PATCH, DELETE)
 api.interceptors.request.use(
     async (config) => {
-        // Verifica se o método da requisição requer um CSRF token
+        // Only apply for methods that need CSRF protection
         if (['post', 'put', 'patch', 'delete'].includes(config.method)) {
-            try {
-                let csrfToken = getCsrfToken(); // Tenta obter o token do cookie
-                if (!csrfToken) {
-                    // Se o token não estiver no cookie, tenta buscá-lo do servidor
-                    // A requisição para 'csrf/' deve ser relativa à baseURL
-                    await api.get('csrf/'); 
-                    csrfToken = getCsrfToken(); // Tenta novamente após a busca
+            // If we don't have a cached token, fetch it
+            if (!cachedCsrfToken) {
+                try {
+                    // Make a GET request to the CSRF endpoint to get the token in the response body
+                    const response = await api.get('csrf/'); 
+                    cachedCsrfToken = response.data.csrftoken; // Store the token from the response body
+                } catch (error) {
+                    console.warn('Erro ao buscar CSRF token do servidor:', error);
+                    // Optionally, re-throw the error or handle it to prevent the request from proceeding
+                    // For now, we'll just log and proceed without the token, which will likely result in a 403
                 }
-                if (csrfToken) {
-                    // Adiciona o token ao cabeçalho X-CSRFToken
-                    config.headers['X-CSRFToken'] = csrfToken;
-                }
-            } catch (error) {
-                console.warn('Erro ao obter CSRF token:', error);
+            }
+            // If we have a token (either cached or newly fetched), add it to the header
+            if (cachedCsrfToken) {
+                config.headers['X-CSRFToken'] = cachedCsrfToken;
             }
         }
-        return config; // Retorna a configuração da requisição modificada
+        return config; // Return the modified request configuration
     },
     (error) => {
-        // Rejeita a promessa se houver um erro na configuração da requisição
+        // Reject the promise if there's an error in the request configuration
         return Promise.reject(error);
     }
 );
@@ -54,7 +58,7 @@ api.interceptors.response.use(
         if (error.response?.status === 401) { // Apenas desloga se for 401 (Unauthorized)
             // Limpa os dados de autenticação armazenados localmente
             localStorage.removeItem('user');
-            localStorage.removeItem('userType');
+            localStorage.removeItem('userType'); // Esta linha pode ser removida se 'userType' não for usado
             localStorage.removeItem('isAuthenticated');
             // Redireciona para a página de login, a menos que já esteja nela
             if (window.location.pathname !== '/login') {
@@ -66,34 +70,6 @@ api.interceptors.response.use(
         return Promise.reject(error); 
     }
 );
-
-// Função auxiliar para obter o CSRF token de um cookie
-function getCsrfToken() {
-    const name = 'csrftoken';
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            // Verifica se o cookie começa com o nome do CSRF token
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-// Função auxiliar para buscar o CSRF token do servidor
-async function fetchCsrfToken() {
-    try {
-        // Faz uma requisição GET para o endpoint CSRF do Django
-        await api.get('csrf/'); 
-    } catch (error) {
-        console.warn('Erro ao buscar CSRF token:', error);
-    }
-}
 
 /*
  * Serviços de autenticação
