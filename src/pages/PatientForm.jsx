@@ -66,7 +66,7 @@ const PatientForm = () => {
         if (err.response.data.detail) {
           errorMessage = err.response.data.detail;
         } else if (typeof err.response.data === 'object') {
-          // CORREÇÃO AQUI: Garante que 'messages' é um array antes de tentar 'join'
+          // Garante que 'messages' é um array antes de tentar 'join'
           errorMessage = Object.entries(err.response.data)
             .map(([field, messages]) => {
               const msgArray = Array.isArray(messages) ? messages : [messages];
@@ -74,6 +74,7 @@ const PatientForm = () => {
             })
             .join('; ');
         } else {
+          // Se a resposta for uma string (como a página HTML de erro 500), exibe-a diretamente
           errorMessage = err.response.data.toString();
         }
       }
@@ -156,9 +157,11 @@ const PatientForm = () => {
                   <Field
                     type="email"
                     name="email"
+                    // Torna o campo de email readOnly em modo de edição
+                    readOnly={isEditing} 
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
                       errors.email && touched.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    } ${isEditing ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     placeholder="email@exemplo.com"
                   />
                   <ErrorMessage name="email" component="div" className="text-red-500 text-sm mt-1" />

@@ -280,7 +280,6 @@ export const aiService = {
     },
 
     getHistory: async () => {
-        // Esta URL está correta e já está retornando 200 OK nos logs
         const response = await api.get('ia/historico/api/');
         return response.data;
     },
@@ -291,17 +290,14 @@ export const aiService = {
  */
 export const notificationService = {
     getNotifications: async () => {
-        // CORREÇÃO APLICADA AQUI: Adicionado 'usuarios/' ao caminho da API de notificações
         const response = await api.get('usuarios/notificacoes/'); 
         return response.data;
     },
     markAsRead: async (notificationId) => {
-        // CORREÇÃO APLICADA AQUI: Adicionado 'usuarios/' ao caminho da API de notificações
         const response = await api.patch(`usuarios/notificacoes/${notificationId}/`, { lida: true });
         return response.data;
     },
     deleteNotification: async (notificationId) => {
-        // CORREÇÃO APLICADA AQUI: Adicionado 'usuarios/' ao caminho da API de notificações
         const response = await api.delete(`usuarios/notificacoes/${notificationId}/`);
         return response.data;
     }
